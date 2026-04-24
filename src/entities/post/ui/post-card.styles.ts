@@ -9,6 +9,12 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
     gap: tokens.spacing.md,
   },
+  cardContentPressable: {
+    gap: tokens.spacing.md,
+  },
+  cardContentPressablePressed: {
+    opacity: 0.97,
+  },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",

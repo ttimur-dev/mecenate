@@ -7,7 +7,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: tokens.colors.background,
   },
-  scrollContent: {
+  list: {
+    flex: 1,
+  },
+  listContent: {
     paddingBottom: tokens.spacing.xs,
   },
   centerState: {
@@ -79,6 +82,11 @@ export const styles = StyleSheet.create({
     gap: tokens.spacing.xs,
     paddingBottom: tokens.spacing.sm,
   },
+  commentsLoader: {
+    paddingVertical: tokens.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   commentsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -96,8 +104,9 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: tokens.fonts.medium,
   },
-  commentsList: {
-    gap: 0,
+  commentItem: {
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: tokens.spacing.md,
   },
   commentRow: {
     paddingVertical: tokens.spacing.xs,
@@ -134,17 +143,6 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: tokens.fonts.medium,
   },
-  commentLike: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  commentLikeCount: {
-    color: tokens.colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: tokens.fonts.bold,
-  },
   composer: {
     backgroundColor: tokens.colors.surface,
     flexDirection: 'row',
@@ -153,6 +151,13 @@ export const styles = StyleSheet.create({
     paddingTop: tokens.spacing.md,
     paddingHorizontal: tokens.spacing.md,
     paddingBottom: 13,
+  },
+  composerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: tokens.colors.surface,
   },
   input: {
     flex: 1,
@@ -172,5 +177,11 @@ export const styles = StyleSheet.create({
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.45,
+  },
+  sendButtonPressed: {
+    opacity: 0.78,
   },
 });

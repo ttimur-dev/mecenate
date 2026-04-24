@@ -1,11 +1,11 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
-const API_TOKEN = process.env.EXPO_PUBLIC_API_TOKEN!;
+import { API_BASE_URL, API_TOKEN } from '@/shared/config';
 
 type QueryValue = string | number | boolean | null | undefined;
 
 type RequestOptions = {
   query?: Record<string, QueryValue>;
   signal?: AbortSignal;
+  body?: unknown;
 };
 
 type ApiErrorPayload = {
@@ -44,15 +44,21 @@ function buildUrl(path: string, query?: Record<string, QueryValue>) {
   return url;
 }
 
-export async function apiGet<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function apiRequest<T>(
+  method: 'GET' | 'POST',
+  path: string,
+  options: RequestOptions = {}
+): Promise<T> {
   const url = buildUrl(path, options.query);
   const response = await fetch(url, {
-    method: 'GET',
+    method,
     signal: options.signal,
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${API_TOKEN}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     },
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });
 
   const payload = (await response.json().catch(() => null)) as ApiErrorPayload | T | null;
@@ -65,4 +71,12 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
   }
 
   return payload as T;
+}
+
+export async function apiGet<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return apiRequest<T>('GET', path, options);
+}
+
+export async function apiPost<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return apiRequest<T>('POST', path, options);
 }

@@ -1,11 +1,11 @@
-export type { Author, Comment, Post, PostsPage, Tier } from './model/types';
+export type { Author, Comment, CommentsPage, Post, PostsPage, Tier } from './model/types';
 
-export { useFeedPostsQuery } from './model/use-feed-posts-query';
-export { usePostCommentsQuery } from './model/use-post-comments-query';
-export { usePostDetailQuery } from './model/use-post-detail-query';
+export { useFeedPostsQuery, usePostCommentsQuery, usePostDetailQuery } from './model/queries';
+export { useCreatePostCommentMutation, useTogglePostLikeMutation } from './model/mutations';
+export { usePostRealtimeSync } from './model/realtime';
 
 export { FeedSkeletonCard } from './ui/feed-skeleton-card';
-export { MetricChip } from './ui/metric-chip';
+export { MetricChip, PostLikeChip } from './ui/post-actions';
 export { PostCard } from './ui/post-card';
 export {
   CommentIcon,

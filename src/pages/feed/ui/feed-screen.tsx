@@ -1,21 +1,136 @@
+import type { ReactElement } from 'react';
 import { observer } from 'mobx-react-lite';
+import { Image } from 'expo-image';
 import { useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PostCard, type Post, useFeedPostsQuery } from '@/entities/post';
-import { FeedFilterTabs, feedFilterStore } from '@/features/feed-filter';
+import {
+  FeedSkeletonCard,
+  PostCard,
+  type Post,
+  useFeedPostsQuery,
+  useTogglePostLikeMutation,
+} from '@/entities/post';
+import { FeedFilterTabs, feedFilterStore, type FeedFilter } from '@/features/feed-filter';
 import { ApiRequestError } from '@/shared/api';
 import { tokens } from '@/shared/theme/tokens';
-import { FeedEmptyState } from './feed-empty-state';
-import { FeedErrorState } from './feed-error-state';
-import { FeedLoadingState } from './feed-loading-state';
 import { styles } from './feed-screen.styles';
 
-const FeedPage = observer(() => {
+const ILLUSTRATION_SOURCE = require('../../../../assets/illustration/illustration.png');
+const FEED_SKELETON_ITEMS = ['skeleton-0', 'skeleton-1', 'skeleton-2'];
+const ERROR_ITEMS = ['error-0', 'error-1', 'error-2'];
+
+type FeedStateProps = {
+  filterTabs: ReactElement;
+};
+
+type FeedErrorStateProps = FeedStateProps & {
+  onRetry: () => void;
+};
+
+type FeedEmptyStateProps = FeedStateProps & {
+  onGoHome: () => void;
+};
+
+function FeedPostCard({ post }: { post: Post }) {
   const router = useRouter();
-  const query = useFeedPostsQuery(feedFilterStore.simulateError, feedFilterStore.activeFilter);
+  const toggleLikeMutation = useTogglePostLikeMutation(post.id);
+
+  const handleOpenPost = useCallback(() => {
+    if (post.tier === 'paid') {
+      return;
+    }
+
+    router.push({ pathname: '/post/[id]', params: { id: post.id } });
+  }, [post.id, post.tier, router]);
+
+  const handleLikePress = useCallback(() => {
+    if (toggleLikeMutation.isPending) {
+      return;
+    }
+
+    toggleLikeMutation.mutate();
+  }, [toggleLikeMutation]);
+
+  return (
+    <PostCard
+      post={post}
+      onPress={handleOpenPost}
+      onPressLike={post.tier === 'paid' ? undefined : handleLikePress}
+      likeDisabled={toggleLikeMutation.isPending}
+    />
+  );
+}
+
+function FeedLoadingState({ filterTabs }: FeedStateProps) {
+  return (
+    <FlatList
+      data={FEED_SKELETON_ITEMS}
+      keyExtractor={(item) => item}
+      renderItem={() => <FeedSkeletonCard />}
+      contentContainerStyle={styles.listContent}
+      ListHeaderComponent={filterTabs}
+      ListHeaderComponentStyle={styles.listHeader}
+      ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+      showsVerticalScrollIndicator={false}
+    />
+  );
+}
+
+function FeedErrorState({ filterTabs, onRetry }: FeedErrorStateProps) {
+  return (
+    <FlatList
+      data={ERROR_ITEMS}
+      keyExtractor={(item) => item}
+      renderItem={() => (
+        <View style={styles.stateCard}>
+          <View style={styles.stateHeaderSkeleton}>
+            <View style={styles.stateHeaderAvatarSkeleton} />
+            <View style={styles.stateHeaderLabelSkeleton} />
+          </View>
+
+          <View style={styles.stateContent}>
+            <Image source={ILLUSTRATION_SOURCE} style={styles.stateIllustration} contentFit="contain" />
+            <Text style={styles.stateTitle}>Не удалось загрузить публикацию</Text>
+          </View>
+
+          <Pressable onPress={onRetry} style={styles.stateButton}>
+            <Text style={styles.stateButtonText}>Повторить</Text>
+          </Pressable>
+        </View>
+      )}
+      contentContainerStyle={styles.listContent}
+      ListHeaderComponent={filterTabs}
+      ListHeaderComponentStyle={styles.listHeader}
+      ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+      showsVerticalScrollIndicator={false}
+    />
+  );
+}
+
+function FeedEmptyState({ filterTabs, onGoHome }: FeedEmptyStateProps) {
+  return (
+    <View style={styles.stateContainer}>
+      {filterTabs}
+      <View style={[styles.stateCard, styles.emptyStateCard]}>
+        <View style={styles.stateContent}>
+          <Image source={ILLUSTRATION_SOURCE} style={styles.stateIllustration} contentFit="contain" />
+          <Text style={styles.stateTitle}>По вашему запросу ничего не найдено</Text>
+        </View>
+
+        <Pressable onPress={onGoHome} style={styles.stateButton}>
+          <Text style={styles.stateButtonText}>На главную</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const FeedPage = observer(() => {
+  const activeFilter = feedFilterStore.activeFilter;
+  const query = useFeedPostsQuery(feedFilterStore.simulateError, activeFilter);
 
   const posts = useMemo(() => query.data?.pages.flatMap((page) => page.posts) ?? [], [query.data]);
   const isRefreshing = query.isRefetching && !query.isFetchingNextPage;
@@ -29,6 +144,10 @@ const FeedPage = observer(() => {
   const handleRetry = useCallback(() => {
     void query.refetch();
   }, [query]);
+
+  const handleFilterChange = useCallback((filter: FeedFilter) => {
+    feedFilterStore.setActiveFilter(filter);
+  }, []);
 
   const handleGoHome = useCallback(() => {
     if (feedFilterStore.activeFilter !== 'all') {
@@ -47,31 +166,13 @@ const FeedPage = observer(() => {
     void query.fetchNextPage();
   }, [query]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: Post }) => {
-      const isPaid = item.tier === 'paid';
-
-      return (
-        <Pressable
-          disabled={isPaid}
-          style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressablePressed]}
-          onPress={() => {
-            if (isPaid) {
-              return;
-            }
-            router.push({ pathname: '/post/[id]', params: { id: item.id } });
-          }}>
-          <PostCard post={item} />
-        </Pressable>
-      );
-    },
-    [router]
-  );
+  const renderItem = useCallback(({ item }: { item: Post }) => <FeedPostCard post={item} />, []);
+  const filterTabs = <FeedFilterTabs activeFilter={activeFilter} onFilterChange={handleFilterChange} />;
 
   if (showInitialLoading) {
     return (
       <SafeAreaView style={styles.screen}>
-        <FeedLoadingState />
+        <FeedLoadingState filterTabs={filterTabs} />
       </SafeAreaView>
     );
   }
@@ -79,7 +180,7 @@ const FeedPage = observer(() => {
   if (showInitialError) {
     return (
       <SafeAreaView style={styles.screen}>
-        <FeedErrorState onRetry={handleRetry} />
+        <FeedErrorState filterTabs={filterTabs} onRetry={handleRetry} />
       </SafeAreaView>
     );
   }
@@ -87,7 +188,7 @@ const FeedPage = observer(() => {
   if (showInitialEmpty) {
     return (
       <SafeAreaView style={styles.screen}>
-        <FeedEmptyState onGoHome={handleGoHome} />
+        <FeedEmptyState filterTabs={filterTabs} onGoHome={handleGoHome} />
       </SafeAreaView>
     );
   }
@@ -101,7 +202,7 @@ const FeedPage = observer(() => {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.35}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={<FeedFilterTabs />}
+        ListHeaderComponent={filterTabs}
         ListHeaderComponentStyle={styles.listHeader}
         ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRetry} />}

@@ -34,3 +34,9 @@ export type Comment = {
   text: string;
   createdAt: string;
 };
+
+export type CommentsPage = {
+  comments: Comment[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
